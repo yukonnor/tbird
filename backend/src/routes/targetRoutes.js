@@ -1,6 +1,7 @@
 const express = require("express");
 const pool = require("../../db/pool");
 const { auth } = require("../middleware/auth");
+const { matchSpeciesName } = require("../services/ebirdService");
 
 const router = express.Router();
 
@@ -108,6 +109,81 @@ router.post("/lists/:listId/species", async (req, res, next) => {
     if (err.code === "23505") {
       return res.status(409).json({ error: "Species already in list" });
     }
+    next(err);
+  }
+});
+
+// POST /api/targets/lists/:listId/species/bulk
+router.post("/lists/:listId/species/bulk", async (req, res, next) => {
+  try {
+    const { species_names } = req.body;
+    if (!species_names || typeof species_names !== "string") {
+      return res.status(400).json({ error: "species_names string is required" });
+    }
+
+    // Verify list belongs to user
+    const list = await pool.query(
+      "SELECT id FROM target_lists WHERE id = $1 AND user_id = $2",
+      [req.params.listId, req.user.id]
+    );
+    if (list.rows.length === 0) {
+      return res.status(404).json({ error: "List not found" });
+    }
+
+    // Parse and clean names
+    const raw = species_names
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .map((s) => s.replace(/^\d+[\.\)]\s*/, "")) // "1. Barn Swallow" or "1) Barn Swallow"
+      .map((s) => s.replace(/\d+(\.\d+)?%/g, "")) // percentages
+      .map((s) => s.replace(/\b(Map|frequency|Frequency)\b/gi, ""))
+      .map((s) => s.trim())
+      .filter((s) => s.length > 1);
+
+    const added = [];
+    const not_found = [];
+    const duplicates = [];
+
+    for (const name of raw) {
+      const match = await matchSpeciesName(name);
+      if (!match) {
+        not_found.push(name);
+        continue;
+      }
+      try {
+        await pool.query(
+          "INSERT INTO target_species (target_list_id, species_code, species_common_name) VALUES ($1, $2, $3)",
+          [req.params.listId, match.speciesCode, match.comName]
+        );
+        added.push(match.comName);
+      } catch (err) {
+        if (err.code === "23505") {
+          duplicates.push(match.comName);
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    res.json({ added, not_found, duplicates });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/targets/species/:speciesId
+router.delete("/species/:speciesId", async (req, res, next) => {
+  try {
+    const { rowCount } = await pool.query(
+      `DELETE FROM target_species
+       WHERE id = $1 AND target_list_id IN (SELECT id FROM target_lists WHERE user_id = $2)`,
+      [req.params.speciesId, req.user.id]
+    );
+    if (rowCount === 0) {
+      return res.status(404).json({ error: "Species not found" });
+    }
+    res.json({ deleted: true });
+  } catch (err) {
     next(err);
   }
 });

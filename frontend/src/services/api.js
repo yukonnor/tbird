@@ -41,3 +41,55 @@ export function getHotspotObservations(locId, back = 14) {
 export function searchSpecies(query) {
   return api.get("/api/ebird/species/search", { params: { q: query } }).then((r) => r.data);
 }
+
+export function searchRegions(query) {
+  return api.get("/api/ebird/regions/search", { params: { q: query } }).then((r) => r.data);
+}
+
+export function getSubregions(regionCode) {
+  return api.get(`/api/ebird/regions/${regionCode}/subregions`).then((r) => r.data);
+}
+
+// Target Lists
+export function getTargetLists() {
+  return api.get("/api/targets/lists").then((r) => r.data);
+}
+
+export function createTargetList(data) {
+  return api.post("/api/targets/lists", data).then((r) => r.data);
+}
+
+export function deleteTargetList(listId) {
+  return api.delete(`/api/targets/lists/${listId}`).then((r) => r.data);
+}
+
+// Target Species
+export function getTargetSpecies(listId, activeOnly = false) {
+  return api
+    .get(`/api/targets/lists/${listId}/species`, {
+      params: activeOnly ? { active_only: "true" } : {},
+    })
+    .then((r) => r.data);
+}
+
+export function addTargetSpecies(listId, data) {
+  return api.post(`/api/targets/lists/${listId}/species`, data).then((r) => r.data);
+}
+
+export function bulkImportSpecies(listId, speciesNames) {
+  return api
+    .post(`/api/targets/lists/${listId}/species/bulk`, { species_names: speciesNames })
+    .then((r) => r.data);
+}
+
+export function markSpeciesSeen(speciesId) {
+  return api.patch(`/api/targets/species/${speciesId}/seen`).then((r) => r.data);
+}
+
+export function markSpeciesUnseen(speciesId) {
+  return api.patch(`/api/targets/species/${speciesId}/unseen`).then((r) => r.data);
+}
+
+export function deleteTargetSpecies(speciesId) {
+  return api.delete(`/api/targets/species/${speciesId}`).then((r) => r.data);
+}

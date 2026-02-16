@@ -60,4 +60,34 @@ router.get("/species/search", async (req, res, next) => {
   }
 });
 
+router.get("/regions/search", async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.trim().length < 2) {
+      return res.status(400).json({ error: "Query must be at least 2 characters" });
+    }
+    const data = await ebirdService.searchRegions(q.trim());
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/regions/:regionCode/subregions", async (req, res, next) => {
+  try {
+    const { regionCode } = req.params;
+    // Determine if this is a country (2 chars) or state (XX-YY)
+    const parts = regionCode.split("-");
+    let data;
+    if (parts.length === 1) {
+      data = await ebirdService.getSubregions(regionCode);
+    } else {
+      data = await ebirdService.getCounties(regionCode);
+    }
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
