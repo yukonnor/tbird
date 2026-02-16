@@ -1,4 +1,7 @@
-function App() {
+import { Routes, Route } from "react-router-dom";
+import TestPage from "./pages/TestPage";
+
+function Home() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center">
@@ -6,7 +9,16 @@ function App() {
         <p className="text-lg text-gray-600">Find your target species.</p>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/test" element={<TestPage />} />
+    </Routes>
+  );
+}
+
+export default App;
