@@ -5,6 +5,8 @@ const requestLogger = require('./middleware/requestLogger');
 const errorHandler = require('./middleware/errorHandler');
 const healthRouter = require('./routes/health');
 const ebirdRouter = require('./routes/ebirdRoutes');
+const authRouter = require('./routes/authRoutes');
+const targetRouter = require('./routes/targetRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -15,6 +17,8 @@ app.use(requestLogger);
 
 app.use('/api/health', healthRouter);
 app.use('/api/ebird', ebirdRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/targets', targetRouter);
 
 app.use(errorHandler);
 

@@ -4,6 +4,28 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:3001",
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Auth
+export function loginUser(email, password) {
+  return api.post("/api/auth/login", { email, password }).then((r) => r.data);
+}
+
+export function registerUser(email, password) {
+  return api.post("/api/auth/register", { email, password }).then((r) => r.data);
+}
+
+export function getCurrentUser() {
+  return api.get("/api/auth/me").then((r) => r.data);
+}
+
+// eBird
 export function getObservations(regionCode, back = 14) {
   return api.get(`/api/ebird/observations/${regionCode}`, { params: { back } }).then((r) => r.data);
 }
