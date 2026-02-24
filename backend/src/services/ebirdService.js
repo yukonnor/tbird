@@ -7,20 +7,30 @@ const client = axios.create({
   headers: { "X-eBirdApiToken": process.env.EBIRD_API_KEY },
 });
 
-let taxonomyCache = null;
-let taxonomyCacheTime = 0;
-const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+// In-memory cache with per-key TTL
+const cache = new Map();
+
+function cached(key, ttlMs, fetchFn) {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.time < ttlMs) {
+    return Promise.resolve(entry.data);
+  }
+  return fetchFn().then((data) => {
+    cache.set(key, { data, time: Date.now() });
+    return data;
+  });
+}
+
+const TTL_24H = 24 * 60 * 60 * 1000;
+const TTL_15M = 15 * 60 * 1000;
 
 async function getTaxonomy() {
-  if (taxonomyCache && Date.now() - taxonomyCacheTime < CACHE_TTL) {
-    return taxonomyCache;
-  }
-  const { data } = await client.get("/ref/taxonomy/ebird", {
-    params: { fmt: "json", cat: "species" },
+  return cached("taxonomy", TTL_24H, async () => {
+    const { data } = await client.get("/ref/taxonomy/ebird", {
+      params: { fmt: "json", cat: "species" },
+    });
+    return data;
   });
-  taxonomyCache = data;
-  taxonomyCacheTime = Date.now();
-  return data;
 }
 
 function normalize(str) {
@@ -33,24 +43,30 @@ function normalize(str) {
 }
 
 async function getRecentObservations(regionCode, back = 14) {
-  const { data } = await client.get(`/data/obs/${regionCode}/recent`, {
-    params: { back },
+  return cached(`obs:${regionCode}:${back}`, TTL_15M, async () => {
+    const { data } = await client.get(`/data/obs/${regionCode}/recent`, {
+      params: { back },
+    });
+    return data;
   });
-  return data;
 }
 
 async function getHotspots(regionCode) {
-  const { data } = await client.get(`/ref/hotspot/${regionCode}`, {
-    params: { fmt: "json" },
+  return cached(`hotspots:${regionCode}`, TTL_15M, async () => {
+    const { data } = await client.get(`/ref/hotspot/${regionCode}`, {
+      params: { fmt: "json" },
+    });
+    return data;
   });
-  return data;
 }
 
 async function getRecentObservationsAtHotspot(locId, back = 14) {
-  const { data } = await client.get(`/data/obs/${locId}/recent`, {
-    params: { back },
+  return cached(`obs:${locId}:${back}`, TTL_15M, async () => {
+    const { data } = await client.get(`/data/obs/${locId}/recent`, {
+      params: { back },
+    });
+    return data;
   });
-  return data;
 }
 
 async function searchSpecies(query) {
