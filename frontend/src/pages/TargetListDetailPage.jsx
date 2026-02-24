@@ -142,6 +142,14 @@ export default function TargetListDetailPage() {
         <p className="text-xs text-gray-400 mt-1">
           {active.length} targets &middot; {seen.length} seen
         </p>
+        {active.length > 0 && (
+          <Link
+            to={`/lists/${listId}/find`}
+            className="inline-block mt-3 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
+          >
+            Where to Find My Targets
+          </Link>
+        )}
       </div>
 
       {/* Tabs */}
@@ -269,7 +277,13 @@ export default function TargetListDetailPage() {
                   <span className="text-sm text-gray-800">
                     {s.species_common_name}
                   </span>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
+                    <Link
+                      to={`/lists/${listId}/species/${s.species_code}/find`}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Find
+                    </Link>
                     <button
                       onClick={() => handleMarkSeen(s.id)}
                       className="text-xs text-green-600 hover:text-green-800 font-medium"

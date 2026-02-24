@@ -2,6 +2,10 @@ const express = require("express");
 const pool = require("../../db/pool");
 const { auth } = require("../middleware/auth");
 const { matchSpeciesName } = require("../services/ebirdService");
+const {
+  findTargetsAtHotspots,
+  findHotspotsForSpecies,
+} = require("../services/targetFinderService");
 
 const router = express.Router();
 
@@ -223,5 +227,52 @@ router.patch("/species/:speciesId/unseen", async (req, res, next) => {
     next(err);
   }
 });
+
+// GET /api/targets/lists/:listId/hotspots
+router.get("/lists/:listId/hotspots", async (req, res, next) => {
+  try {
+    // Verify list belongs to user
+    const list = await pool.query(
+      "SELECT id FROM target_lists WHERE id = $1 AND user_id = $2",
+      [req.params.listId, req.user.id]
+    );
+    if (list.rows.length === 0) {
+      return res.status(404).json({ error: "List not found" });
+    }
+
+    const daysBack = parseInt(req.query.days_back) || 14;
+    const result = await findTargetsAtHotspots(req.params.listId, daysBack);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/targets/lists/:listId/species/:speciesCode/hotspots
+router.get(
+  "/lists/:listId/species/:speciesCode/hotspots",
+  async (req, res, next) => {
+    try {
+      // Verify list belongs to user
+      const list = await pool.query(
+        "SELECT id FROM target_lists WHERE id = $1 AND user_id = $2",
+        [req.params.listId, req.user.id]
+      );
+      if (list.rows.length === 0) {
+        return res.status(404).json({ error: "List not found" });
+      }
+
+      const daysBack = parseInt(req.query.days_back) || 14;
+      const result = await findHotspotsForSpecies(
+        req.params.listId,
+        req.params.speciesCode,
+        daysBack
+      );
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 module.exports = router;

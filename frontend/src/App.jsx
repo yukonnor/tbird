@@ -6,6 +6,8 @@ import RegisterPage from "./pages/RegisterPage";
 import TargetListsPage from "./pages/TargetListsPage";
 import CreateTargetListPage from "./pages/CreateTargetListPage";
 import TargetListDetailPage from "./pages/TargetListDetailPage";
+import FindTargetsPage from "./pages/FindTargetsPage";
+import SpeciesHotspotsPage from "./pages/SpeciesHotspotsPage";
 
 function NavBar() {
   const { user, logout } = useAuth();
@@ -85,6 +87,22 @@ function App() {
         element={
           <ProtectedLayout>
             <TargetListDetailPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/lists/:listId/find"
+        element={
+          <ProtectedLayout>
+            <FindTargetsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/lists/:listId/species/:speciesCode/find"
+        element={
+          <ProtectedLayout>
+            <SpeciesHotspotsPage />
           </ProtectedLayout>
         }
       />

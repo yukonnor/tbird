@@ -93,3 +93,20 @@ export function markSpeciesUnseen(speciesId) {
 export function deleteTargetSpecies(speciesId) {
   return api.delete(`/api/targets/species/${speciesId}`).then((r) => r.data);
 }
+
+// Target Finder
+export function getHotspotsForTargets(listId, daysBack = 14) {
+  return api
+    .get(`/api/targets/lists/${listId}/hotspots`, {
+      params: { days_back: daysBack },
+    })
+    .then((r) => r.data);
+}
+
+export function getHotspotsForSpecies(listId, speciesCode, daysBack = 14) {
+  return api
+    .get(`/api/targets/lists/${listId}/species/${speciesCode}/hotspots`, {
+      params: { days_back: daysBack },
+    })
+    .then((r) => r.data);
+}
