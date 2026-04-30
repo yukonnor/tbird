@@ -7,7 +7,7 @@ import TargetListsPage from "./pages/TargetListsPage";
 import CreateTargetListPage from "./pages/CreateTargetListPage";
 import TargetListDetailPage from "./pages/TargetListDetailPage";
 import FindTargetsPage from "./pages/FindTargetsPage";
-import SpeciesHotspotsPage from "./pages/SpeciesHotspotsPage";
+import IgnoredHotspotsPage from "./pages/IgnoredHotspotsPage";
 
 function NavBar() {
   const { user, logout } = useAuth();
@@ -98,11 +98,12 @@ function App() {
           </ProtectedLayout>
         }
       />
+
       <Route
-        path="/lists/:listId/species/:speciesCode/find"
+        path="/ignored-hotspots"
         element={
           <ProtectedLayout>
-            <SpeciesHotspotsPage />
+            <IgnoredHotspotsPage />
           </ProtectedLayout>
         }
       />

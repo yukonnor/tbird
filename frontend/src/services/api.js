@@ -103,10 +103,15 @@ export function getHotspotsForTargets(listId, daysBack = 14) {
     .then((r) => r.data);
 }
 
-export function getHotspotsForSpecies(listId, speciesCode, daysBack = 14) {
-  return api
-    .get(`/api/targets/lists/${listId}/species/${speciesCode}/hotspots`, {
-      params: { days_back: daysBack },
-    })
-    .then((r) => r.data);
+// Ignored Hotspots
+export function getIgnoredHotspots() {
+  return api.get("/api/targets/ignored-hotspots").then((r) => r.data);
+}
+
+export function ignoreHotspot(locId, locName) {
+  return api.post("/api/targets/ignored-hotspots", { loc_id: locId, loc_name: locName }).then((r) => r.data);
+}
+
+export function unignoreHotspot(locId) {
+  return api.delete(`/api/targets/ignored-hotspots/${locId}`).then((r) => r.data);
 }

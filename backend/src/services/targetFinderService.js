@@ -1,7 +1,7 @@
 const pool = require("../../db/pool");
-const { getRecentObservations, getHotspots } = require("./ebirdService");
+const { getRecentObservations, getHotspots, getRecentObservationsAtHotspot } = require("./ebirdService");
 
-async function findTargetsAtHotspots(targetListId, daysBack = 14) {
+async function findTargetsAtHotspots(targetListId, userId, daysBack = 14) {
   // Get active target species for this list
   const { rows: targets } = await pool.query(
     "SELECT species_code, species_common_name FROM target_species WHERE target_list_id = $1 AND marked_seen_at IS NULL",
@@ -23,6 +23,13 @@ async function findTargetsAtHotspots(targetListId, daysBack = 14) {
   }
 
   const regionCode = listRows[0].region_code;
+
+  const { rows: ignoredRows } = await pool.query(
+    "SELECT loc_id FROM ignored_hotspots WHERE user_id = $1",
+    [userId]
+  );
+  const ignoredLocIds = new Set(ignoredRows.map((r) => r.loc_id));
+
   const targetCodes = new Set(targets.map((t) => t.species_code));
   const targetNameMap = Object.fromEntries(
     targets.map((t) => [t.species_code, t.species_common_name])
@@ -59,6 +66,33 @@ async function findTargetsAtHotspots(targetListId, daysBack = 14) {
         name: targetNameMap[obs.speciesCode] || obs.comName,
         date: obsDate,
       };
+    }
+  }
+
+  // Enrich each hotspot that appeared in results with a per-hotspot call,
+  // which catches additional target species the regional API may have omitted.
+  const relevantLocIds = Object.keys(hotspotTargets);
+  if (relevantLocIds.length > 0) {
+    const perHotspotResults = await Promise.all(
+      relevantLocIds.map((locId) =>
+        getRecentObservationsAtHotspot(locId, daysBack)
+          .then((obs) => ({ locId, obs }))
+          .catch(() => ({ locId, obs: [] }))
+      )
+    );
+
+    for (const { locId, obs } of perHotspotResults) {
+      for (const observation of obs) {
+        if (!targetCodes.has(observation.speciesCode)) continue;
+        const existing = hotspotTargets[locId][observation.speciesCode];
+        const obsDate = observation.obsDt;
+        if (!existing || obsDate > existing.date) {
+          hotspotTargets[locId][observation.speciesCode] = {
+            name: targetNameMap[observation.speciesCode] || observation.comName,
+            date: obsDate,
+          };
+        }
+      }
     }
   }
 
@@ -101,87 +135,13 @@ async function findTargetsAtHotspots(targetListId, daysBack = 14) {
       return (b.mostRecentDate || "").localeCompare(a.mostRecentDate || "");
     });
 
+  const visibleHotspots = rankedHotspots.filter((h) => !ignoredLocIds.has(h.locId));
+
   return {
-    hotspots: rankedHotspots,
+    hotspots: visibleHotspots,
     targetCount: targets.length,
+    hiddenCount: rankedHotspots.length - visibleHotspots.length,
   };
 }
 
-async function findHotspotsForSpecies(
-  targetListId,
-  speciesCode,
-  daysBack = 14
-) {
-  // Verify species is in the list and get its name
-  const { rows: speciesRows } = await pool.query(
-    "SELECT species_code, species_common_name FROM target_species WHERE target_list_id = $1 AND species_code = $2",
-    [targetListId, speciesCode]
-  );
-
-  if (speciesRows.length === 0) {
-    throw new Error("Species not found in this list");
-  }
-
-  const speciesName = speciesRows[0].species_common_name;
-
-  // Get the region code
-  const { rows: listRows } = await pool.query(
-    "SELECT region_code FROM target_lists WHERE id = $1",
-    [targetListId]
-  );
-
-  if (listRows.length === 0) {
-    throw new Error("Target list not found");
-  }
-
-  const regionCode = listRows[0].region_code;
-
-  const [observations, hotspotList] = await Promise.all([
-    getRecentObservations(regionCode, daysBack),
-    getHotspots(regionCode),
-  ]);
-
-  const hotspotMap = Object.fromEntries(
-    hotspotList.map((h) => [h.locId, h])
-  );
-
-  // Filter observations to just this species
-  const hotspotDates = {}; // locId -> most recent date
-
-  for (const obs of observations) {
-    if (obs.speciesCode !== speciesCode) continue;
-    if (!obs.locId) continue;
-
-    if (!hotspotDates[obs.locId] || obs.obsDt > hotspotDates[obs.locId]) {
-      hotspotDates[obs.locId] = obs.obsDt;
-    }
-  }
-
-  const rankedHotspots = Object.entries(hotspotDates)
-    .map(([locId, date]) => {
-      const hotspot = hotspotMap[locId];
-      return {
-        locId,
-        name: hotspot?.locName || locId,
-        lat: hotspot?.lat || null,
-        lng: hotspot?.lng || null,
-        mostRecentDate: date,
-        ebirdUrl: `https://ebird.org/hotspot/${locId}`,
-        mapsUrl:
-          hotspot?.lat && hotspot?.lng
-            ? `https://www.google.com/maps?q=${hotspot.lat},${hotspot.lng}`
-            : null,
-      };
-    })
-    .sort((a, b) =>
-      (b.mostRecentDate || "").localeCompare(a.mostRecentDate || "")
-    );
-
-  return {
-    speciesCode,
-    speciesName,
-    hotspots: rankedHotspots,
-  };
-}
-
-module.exports = { findTargetsAtHotspots, findHotspotsForSpecies };
+module.exports = { findTargetsAtHotspots };

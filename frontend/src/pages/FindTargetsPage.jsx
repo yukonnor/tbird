@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { getHotspotsForTargets, getTargetLists } from "../services/api";
+import { getHotspotsForTargets, getTargetLists, ignoreHotspot } from "../services/api";
 
 export default function FindTargetsPage() {
   const { listId } = useParams();
@@ -9,6 +9,7 @@ export default function FindTargetsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [daysBack, setDaysBack] = useState(14);
+  const [ignoringLocId, setIgnoringLocId] = useState(null);
 
   useEffect(() => {
     getTargetLists().then((lists) => {
@@ -20,6 +21,20 @@ export default function FindTargetsPage() {
   useEffect(() => {
     loadData();
   }, [listId, daysBack]);
+
+  async function handleIgnore(locId, locName) {
+    setIgnoringLocId(locId);
+    try {
+      await ignoreHotspot(locId, locName);
+      setData((prev) => ({
+        ...prev,
+        hotspots: prev.hotspots.filter((h) => h.locId !== locId),
+        hiddenCount: (prev.hiddenCount || 0) + 1,
+      }));
+    } finally {
+      setIgnoringLocId(null);
+    }
+  }
 
   async function loadData() {
     setLoading(true);
@@ -107,10 +122,20 @@ export default function FindTargetsPage() {
 
       {data && data.hotspots.length > 0 && (
         <div className="space-y-3">
-          <p className="text-sm text-gray-500 mb-2">
-            {data.hotspots.length} hotspots with your targets (
-            {data.targetCount} active targets)
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-500">
+              {data.hotspots.length} hotspots with your targets (
+              {data.targetCount} active targets)
+            </p>
+            {data.hiddenCount > 0 && (
+              <Link
+                to="/ignored-hotspots"
+                className="text-sm text-gray-400 hover:text-gray-600"
+              >
+                {data.hiddenCount} hidden
+              </Link>
+            )}
+          </div>
 
           {data.hotspots.map((hotspot, index) => (
             <div
@@ -127,7 +152,7 @@ export default function FindTargetsPage() {
                     {hotspot.targetCount === 1 ? "" : "s"}
                   </p>
                 </div>
-                <div className="flex gap-2 text-xs shrink-0 ml-4">
+                <div className="flex items-center gap-3 text-xs shrink-0 ml-4">
                   <a
                     href={hotspot.ebirdUrl}
                     target="_blank"
@@ -146,6 +171,14 @@ export default function FindTargetsPage() {
                       Maps
                     </a>
                   )}
+                  <button
+                    onClick={() => handleIgnore(hotspot.locId, hotspot.name)}
+                    disabled={ignoringLocId === hotspot.locId}
+                    className="text-gray-300 hover:text-gray-500 disabled:opacity-50"
+                    title="Hide this hotspot"
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
 
@@ -155,12 +188,7 @@ export default function FindTargetsPage() {
                     key={sp.speciesCode}
                     className="flex items-center justify-between text-sm"
                   >
-                    <Link
-                      to={`/lists/${listId}/species/${sp.speciesCode}/find`}
-                      className="text-gray-700 hover:text-blue-600"
-                    >
-                      {sp.name}
-                    </Link>
+                    <span className="text-gray-700">{sp.name}</span>
                     <span className="text-xs text-gray-400 ml-2">
                       {sp.date}
                     </span>

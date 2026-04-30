@@ -2,10 +2,7 @@ const express = require("express");
 const pool = require("../../db/pool");
 const { auth } = require("../middleware/auth");
 const { matchSpeciesName } = require("../services/ebirdService");
-const {
-  findTargetsAtHotspots,
-  findHotspotsForSpecies,
-} = require("../services/targetFinderService");
+const { findTargetsAtHotspots } = require("../services/targetFinderService");
 
 const router = express.Router();
 
@@ -241,38 +238,52 @@ router.get("/lists/:listId/hotspots", async (req, res, next) => {
     }
 
     const daysBack = parseInt(req.query.days_back) || 14;
-    const result = await findTargetsAtHotspots(req.params.listId, daysBack);
+    const result = await findTargetsAtHotspots(req.params.listId, req.user.id, daysBack);
     res.json(result);
   } catch (err) {
     next(err);
   }
 });
 
-// GET /api/targets/lists/:listId/species/:speciesCode/hotspots
-router.get(
-  "/lists/:listId/species/:speciesCode/hotspots",
-  async (req, res, next) => {
-    try {
-      // Verify list belongs to user
-      const list = await pool.query(
-        "SELECT id FROM target_lists WHERE id = $1 AND user_id = $2",
-        [req.params.listId, req.user.id]
-      );
-      if (list.rows.length === 0) {
-        return res.status(404).json({ error: "List not found" });
-      }
-
-      const daysBack = parseInt(req.query.days_back) || 14;
-      const result = await findHotspotsForSpecies(
-        req.params.listId,
-        req.params.speciesCode,
-        daysBack
-      );
-      res.json(result);
-    } catch (err) {
-      next(err);
-    }
+// GET /api/targets/ignored-hotspots
+router.get("/ignored-hotspots", async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT loc_id, loc_name, created_at FROM ignored_hotspots WHERE user_id = $1 ORDER BY created_at DESC",
+      [req.user.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    next(err);
   }
-);
+});
+
+// POST /api/targets/ignored-hotspots
+router.post("/ignored-hotspots", async (req, res, next) => {
+  try {
+    const { loc_id, loc_name } = req.body;
+    if (!loc_id) return res.status(400).json({ error: "loc_id is required" });
+    await pool.query(
+      "INSERT INTO ignored_hotspots (user_id, loc_id, loc_name) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+      [req.user.id, loc_id, loc_name || null]
+    );
+    res.status(201).json({ loc_id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/targets/ignored-hotspots/:locId
+router.delete("/ignored-hotspots/:locId", async (req, res, next) => {
+  try {
+    await pool.query(
+      "DELETE FROM ignored_hotspots WHERE user_id = $1 AND loc_id = $2",
+      [req.user.id, req.params.locId]
+    );
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;
