@@ -7,6 +7,7 @@ const healthRouter = require('./routes/health');
 const ebirdRouter = require('./routes/ebirdRoutes');
 const authRouter = require('./routes/authRoutes');
 const targetRouter = require('./routes/targetRoutes');
+const weatherRouter = require('./routes/weatherRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,6 +20,7 @@ app.use('/api/health', healthRouter);
 app.use('/api/ebird', ebirdRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/targets', targetRouter);
+app.use('/api/weather', weatherRouter);
 
 app.use(errorHandler);
 

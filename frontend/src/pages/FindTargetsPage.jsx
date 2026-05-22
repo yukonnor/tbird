@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { getHotspotsForTargets, getTargetLists, ignoreHotspot } from "../services/api";
+import { getHotspotsForTargets, getTargetLists, ignoreHotspot, getWeather } from "../services/api";
+
+const WEATHER_AUTO_LOAD = 10;
 
 export default function FindTargetsPage() {
   const { listId } = useParams();
@@ -10,6 +12,7 @@ export default function FindTargetsPage() {
   const [error, setError] = useState(null);
   const [daysBack, setDaysBack] = useState(14);
   const [ignoringLocId, setIgnoringLocId] = useState(null);
+  const [weatherData, setWeatherData] = useState({}); // { [locId]: { loading, data, error } }
 
   useEffect(() => {
     getTargetLists().then((lists) => {
@@ -21,6 +24,24 @@ export default function FindTargetsPage() {
   useEffect(() => {
     loadData();
   }, [listId, daysBack]);
+
+  function setHotspotWeather(locId, update) {
+    setWeatherData((prev) => ({
+      ...prev,
+      [locId]: { ...prev[locId], ...update },
+    }));
+  }
+
+  async function fetchWeather(locId, lat, lng) {
+    if (!lat || !lng) return;
+    setHotspotWeather(locId, { loading: true, data: null, error: false });
+    try {
+      const data = await getWeather(lat, lng);
+      setHotspotWeather(locId, { loading: false, data });
+    } catch {
+      setHotspotWeather(locId, { loading: false, error: true });
+    }
+  }
 
   async function handleIgnore(locId, locName) {
     setIgnoringLocId(locId);
@@ -39,9 +60,13 @@ export default function FindTargetsPage() {
   async function loadData() {
     setLoading(true);
     setError(null);
+    setWeatherData({});
     try {
       const result = await getHotspotsForTargets(listId, daysBack);
       setData(result);
+      result.hotspots.slice(0, WEATHER_AUTO_LOAD).forEach((h) => {
+        if (h.lat && h.lng) fetchWeather(h.locId, h.lat, h.lng);
+      });
     } catch (err) {
       setError(err.response?.data?.error || "Failed to load hotspots");
     } finally {
@@ -56,6 +81,22 @@ export default function FindTargetsPage() {
     if (ratio < 0.3) return "border-l-4 border-l-orange-400 bg-orange-50";
     if (ratio < 0.6) return "border-l-4 border-l-yellow-400 bg-yellow-50";
     return "border-l-4 border-l-gray-200 bg-white";
+  }
+
+  function degToCardinal(deg) {
+    const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+    return dirs[Math.round(deg / 22.5) % 16];
+  }
+
+  function formatWeather(w) {
+    let str = `${w.temp}°F · ${w.description}`;
+    if (w.windSpeed > 0) {
+      const dir = w.windDeg != null ? ` ${degToCardinal(w.windDeg)}` : "";
+      str += ` · Wind${dir} ${w.windSpeed} mph`;
+      if (w.windGust != null && w.windGust > w.windSpeed) str += `, gusts to ${w.windGust} mph`;
+    }
+    if (w.precipitation) str += ` · Precip ${w.precipitation.toFixed(1)} mm`;
+    return str;
   }
 
   return (
@@ -137,66 +178,99 @@ export default function FindTargetsPage() {
             )}
           </div>
 
-          {data.hotspots.map((hotspot, index) => (
-            <div
-              key={hotspot.locId}
-              className={`rounded-md border border-gray-200 p-4 ${getTierClass(index, data.hotspots.length)}`}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900">
-                    {hotspot.name}
-                  </h3>
-                  <p className="text-sm font-medium text-blue-700 mt-0.5">
-                    {hotspot.targetCount} of your target
-                    {hotspot.targetCount === 1 ? "" : "s"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 text-xs shrink-0 ml-4">
-                  <a
-                    href={hotspot.ebirdUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    eBird
-                  </a>
-                  {hotspot.mapsUrl && (
+          {data.hotspots.map((hotspot, index) => {
+            const weather = weatherData[hotspot.locId];
+            const autoLoaded = index < WEATHER_AUTO_LOAD;
+
+            return (
+              <div
+                key={hotspot.locId}
+                className={`rounded-md border border-gray-200 p-4 ${getTierClass(index, data.hotspots.length)}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">
+                      {hotspot.name}
+                    </h3>
+                    <p className="text-sm font-medium text-blue-700 mt-0.5">
+                      {hotspot.targetCount} of your target
+                      {hotspot.targetCount === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs shrink-0 ml-4">
                     <a
-                      href={hotspot.mapsUrl}
+                      href={hotspot.ebirdUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-800"
                     >
-                      Maps
+                      eBird
                     </a>
-                  )}
-                  <button
-                    onClick={() => handleIgnore(hotspot.locId, hotspot.name)}
-                    disabled={ignoringLocId === hotspot.locId}
-                    className="text-gray-300 hover:text-gray-500 disabled:opacity-50"
-                    title="Hide this hotspot"
-                  >
-                    ✕
-                  </button>
+                    {hotspot.mapsUrl && (
+                      <a
+                        href={hotspot.mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        Maps
+                      </a>
+                    )}
+                    <button
+                      onClick={() => handleIgnore(hotspot.locId, hotspot.name)}
+                      disabled={ignoringLocId === hotspot.locId}
+                      className="text-gray-300 hover:text-gray-500 disabled:opacity-50"
+                      title="Hide this hotspot"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {/* Weather row */}
+                {hotspot.lat && hotspot.lng && (
+                  <div className="mt-1.5 text-xs text-gray-500">
+                    {autoLoaded ? (
+                      <>
+                        {!weather && null}
+                        {weather?.loading && <span className="text-gray-400">Loading weather...</span>}
+                        {weather?.data && <span>{formatWeather(weather.data)}</span>}
+                        {weather?.error && null}
+                      </>
+                    ) : (
+                      <>
+                        {!weather && (
+                          <button
+                            onClick={() => fetchWeather(hotspot.locId, hotspot.lat, hotspot.lng)}
+                            className="text-gray-400 hover:text-gray-600 underline"
+                          >
+                            Load weather
+                          </button>
+                        )}
+                        {weather?.loading && <span className="text-gray-400">Loading weather...</span>}
+                        {weather?.data && <span>{formatWeather(weather.data)}</span>}
+                        {weather?.error && null}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-2 space-y-1">
+                  {hotspot.species.map((sp) => (
+                    <div
+                      key={sp.speciesCode}
+                      className="flex items-center justify-between text-sm"
+                    >
+                      <span className="text-gray-700">{sp.name}</span>
+                      <span className="text-xs text-gray-400 ml-2">
+                        {sp.date}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              <div className="mt-2 space-y-1">
-                {hotspot.species.map((sp) => (
-                  <div
-                    key={sp.speciesCode}
-                    className="flex items-center justify-between text-sm"
-                  >
-                    <span className="text-gray-700">{sp.name}</span>
-                    <span className="text-xs text-gray-400 ml-2">
-                      {sp.date}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

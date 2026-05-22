@@ -103,6 +103,11 @@ export function getHotspotsForTargets(listId, daysBack = 14) {
     .then((r) => r.data);
 }
 
+// Weather
+export function getWeather(lat, lng) {
+  return api.get("/api/weather", { params: { lat, lng } }).then((r) => r.data);
+}
+
 // Ignored Hotspots
 export function getIgnoredHotspots() {
   return api.get("/api/targets/ignored-hotspots").then((r) => r.data);
