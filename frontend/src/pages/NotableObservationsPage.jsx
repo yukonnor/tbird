@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { getTargetLists, getNotableObservations } from "../services/api";
+import { getTargetLists, getTargetSpecies, getNotableObservations } from "../services/api";
 
 const INITIAL_CHECKLIST_LIMIT = 10;
 
@@ -37,23 +37,30 @@ function allAboutBirdsUrl(comName) {
   return `https://www.allaboutbirds.org/guide/${slug}/id`;
 }
 
-function SpeciesGroup({ group }) {
+function SpeciesGroup({ group, isTarget }) {
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? group.obs : group.obs.slice(0, INITIAL_CHECKLIST_LIMIT);
   const hiddenCount = group.obs.length - shown.length;
 
   return (
     <div className="bg-white border border-gray-200 rounded-md p-4">
-      <div className="mb-2">
-        <a
-          href={allAboutBirdsUrl(group.comName)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-base font-semibold text-blue-700 hover:text-blue-900 hover:underline"
-        >
-          {group.comName}
-        </a>
-        <p className="text-xs text-gray-400 italic">{group.sciName}</p>
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div>
+          <a
+            href={allAboutBirdsUrl(group.comName)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-base font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+          >
+            {group.comName}
+          </a>
+          <p className="text-xs text-gray-400 italic">{group.sciName}</p>
+        </div>
+        {isTarget && (
+          <span className="text-xs font-medium text-green-800 bg-green-100 border border-green-200 rounded px-2 py-0.5 shrink-0">
+            Target
+          </span>
+        )}
       </div>
       <div className="space-y-1">
         {shown.map((o, i) => {
@@ -116,14 +123,20 @@ export default function NotableObservationsPage() {
   const [list, setList] = useState(null);
   const [back, setBack] = useState(7);
   const [obs, setObs] = useState([]);
+  const [targetCodes, setTargetCodes] = useState(new Set());
+  const [onlyTargets, setOnlyTargets] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const lists = await getTargetLists();
+        const [lists, species] = await Promise.all([
+          getTargetLists(),
+          getTargetSpecies(listId, true),
+        ]);
         setList(lists.find((l) => l.id === listId) || null);
+        setTargetCodes(new Set(species.map((s) => s.species_code)));
       } catch {
         // handled silently
       }
@@ -157,7 +170,11 @@ export default function NotableObservationsPage() {
     return <div className="p-8 text-center text-gray-500">List not found.</div>;
   }
 
-  const groups = groupBySpecies(obs);
+  const allGroups = groupBySpecies(obs);
+  const groups = onlyTargets
+    ? allGroups.filter((g) => targetCodes.has(g.obs[0].speciesCode))
+    : allGroups;
+  const targetMatchCount = allGroups.filter((g) => targetCodes.has(g.obs[0].speciesCode)).length;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -172,22 +189,34 @@ export default function NotableObservationsPage() {
         </p>
       </div>
 
-      <div className="mb-6 flex items-center gap-2">
-        <label htmlFor="back" className="text-sm text-gray-700">
-          Days back:
+      <div className="mb-6 flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <label htmlFor="back" className="text-sm text-gray-700">
+            Days back:
+          </label>
+          <input
+            id="back"
+            type="number"
+            min={1}
+            max={30}
+            value={back}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              if (!isNaN(v) && v >= 1 && v <= 30) setBack(v);
+            }}
+            className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={onlyTargets}
+            onChange={(e) => setOnlyTargets(e.target.checked)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          Only show targets{" "}
+          <span className="text-xs text-gray-400">({targetMatchCount})</span>
         </label>
-        <input
-          id="back"
-          type="number"
-          min={1}
-          max={30}
-          value={back}
-          onChange={(e) => {
-            const v = parseInt(e.target.value, 10);
-            if (!isNaN(v) && v >= 1 && v <= 30) setBack(v);
-          }}
-          className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
       </div>
 
       {loading && <p className="text-sm text-gray-500">Loading observations...</p>}
@@ -195,14 +224,20 @@ export default function NotableObservationsPage() {
 
       {!loading && !error && groups.length === 0 && (
         <p className="text-center text-gray-400 py-8 text-sm">
-          No notable observations reported in this region in the last {back} day{back === 1 ? "" : "s"}.
+          {onlyTargets && allGroups.length > 0
+            ? "No target species in recent notable observations."
+            : `No notable observations reported in this region in the last ${back} day${back === 1 ? "" : "s"}.`}
         </p>
       )}
 
       {!loading && !error && groups.length > 0 && (
         <div className="space-y-4">
           {groups.map((group) => (
-            <SpeciesGroup key={group.obs[0].speciesCode} group={group} />
+            <SpeciesGroup
+              key={group.obs[0].speciesCode}
+              group={group}
+              isTarget={targetCodes.has(group.obs[0].speciesCode)}
+            />
           ))}
         </div>
       )}
