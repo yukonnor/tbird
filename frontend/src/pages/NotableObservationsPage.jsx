@@ -9,13 +9,18 @@ function groupBySpecies(observations) {
   for (const obs of observations) {
     const key = obs.speciesCode;
     if (!groups.has(key)) {
-      groups.set(key, { comName: obs.comName, sciName: obs.sciName, obs: [] });
+      groups.set(key, { comName: obs.comName, sciName: obs.sciName, obs: [], seen: new Set() });
     }
-    groups.get(key).obs.push(obs);
+    const group = groups.get(key);
+    const dedupeKey = obs.subId || `${obs.locId}-${obs.obsDt}`;
+    if (group.seen.has(dedupeKey)) continue;
+    group.seen.add(dedupeKey);
+    group.obs.push(obs);
   }
   for (const group of groups.values()) {
     group.obs.sort((a, b) => (a.obsDt < b.obsDt ? 1 : -1));
     group.mostRecent = group.obs[0].obsDt;
+    delete group.seen;
   }
   return Array.from(groups.values()).sort((a, b) =>
     a.mostRecent < b.mostRecent ? 1 : -1
