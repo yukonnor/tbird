@@ -142,14 +142,22 @@ export default function TargetListDetailPage() {
         <p className="text-xs text-gray-400 mt-1">
           {active.length} targets &middot; {seen.length} seen
         </p>
-        {active.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {active.length > 0 && (
+            <Link
+              to={`/lists/${listId}/find`}
+              className="inline-block px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
+            >
+              Where to Find My Targets
+            </Link>
+          )}
           <Link
-            to={`/lists/${listId}/find`}
-            className="inline-block mt-3 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
+            to={`/lists/${listId}/notable`}
+            className="inline-block px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50"
           >
-            Where to Find My Targets
+            Recent Notable Observations
           </Link>
-        )}
+        </div>
       </div>
 
       {/* Tabs */}

@@ -30,6 +30,10 @@ export function getObservations(regionCode, back = 14) {
   return api.get(`/api/ebird/observations/${regionCode}`, { params: { back } }).then((r) => r.data);
 }
 
+export function getNotableObservations(regionCode, back = 7) {
+  return api.get(`/api/ebird/notable/${regionCode}`, { params: { back } }).then((r) => r.data);
+}
+
 export function getHotspots(regionCode) {
   return api.get(`/api/ebird/hotspots/${regionCode}`).then((r) => r.data);
 }

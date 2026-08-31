@@ -23,6 +23,22 @@ router.get("/observations/:regionCode", async (req, res, next) => {
   }
 });
 
+router.get("/notable/:regionCode", async (req, res, next) => {
+  try {
+    const { regionCode } = req.params;
+    if (!validateRegionCode(regionCode)) {
+      return res.status(400).json({ error: "Invalid region code" });
+    }
+    let back = parseInt(req.query.back, 10) || 7;
+    if (back < 1) back = 1;
+    if (back > 30) back = 30;
+    const data = await ebirdService.getRecentNotableObservations(regionCode, back);
+    res.json(data);
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/hotspots/:regionCode", async (req, res, next) => {
   try {
     const { regionCode } = req.params;

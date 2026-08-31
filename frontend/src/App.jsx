@@ -7,6 +7,7 @@ import TargetListsPage from "./pages/TargetListsPage";
 import CreateTargetListPage from "./pages/CreateTargetListPage";
 import TargetListDetailPage from "./pages/TargetListDetailPage";
 import FindTargetsPage from "./pages/FindTargetsPage";
+import NotableObservationsPage from "./pages/NotableObservationsPage";
 import IgnoredHotspotsPage from "./pages/IgnoredHotspotsPage";
 
 function NavBar() {
@@ -95,6 +96,14 @@ function App() {
         element={
           <ProtectedLayout>
             <FindTargetsPage />
+          </ProtectedLayout>
+        }
+      />
+      <Route
+        path="/lists/:listId/notable"
+        element={
+          <ProtectedLayout>
+            <NotableObservationsPage />
           </ProtectedLayout>
         }
       />

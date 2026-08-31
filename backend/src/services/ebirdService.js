@@ -51,6 +51,15 @@ async function getRecentObservations(regionCode, back = 14) {
   });
 }
 
+async function getRecentNotableObservations(regionCode, back = 7) {
+  return cached(`notable:${regionCode}:${back}`, TTL_15M, async () => {
+    const { data } = await client.get(`/data/obs/${regionCode}/recent/notable`, {
+      params: { back, detail: "full" },
+    });
+    return data;
+  });
+}
+
 async function getHotspots(regionCode) {
   return cached(`hotspots:${regionCode}`, TTL_15M, async () => {
     const { data } = await client.get(`/ref/hotspot/${regionCode}`, {
@@ -153,6 +162,7 @@ async function searchRegions(query) {
 
 module.exports = {
   getRecentObservations,
+  getRecentNotableObservations,
   getHotspots,
   getRecentObservationsAtHotspot,
   searchSpecies,
