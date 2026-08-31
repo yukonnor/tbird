@@ -38,11 +38,10 @@ A birding app that helps eBird users find target species based on recent sightin
   - "Best bet right now: Crissy Field (high tide, 3 targets seen this morning)"
   - "Tomorrow morning: Try Bolinas Lagoon (low tide at dawn, great for shorebirds)"
 
-### 4. Deployment
-- Deploy frontend to Vercel
-- Deploy backend to Render
-- Set up Supabase PostgreSQL
-- Configure all environment variables
+### 4. Deployment ✓ Done
+- Frontend: Vercel — https://tbird.vercel.app
+- Backend: Render (free tier) — https://tbird-9iyk.onrender.com
+- Database: Supabase PostgreSQL
 
 ## Architecture
 
@@ -73,6 +72,14 @@ A birding app that helps eBird users find target species based on recent sightin
 **Auth** (`context/AuthContext.jsx`): `useAuth()` hook for auth state, login/logout, token storage.
 
 **Env vars**: Frontend uses `VITE_API_URL`. Backend uses `PORT`, `EBIRD_API_KEY`, `OPENWEATHER_API_KEY`, `ANTHROPIC_API_KEY`, `DATABASE_URL`, `JWT_SECRET`.
+
+## Deployment Notes
+
+- **Supabase**: use pooler connection strings, not direct (`db.xxx.supabase.co` is IPv6-only on free tier and fails from most home ISPs). Session pooler (5432) for migrations, Transaction pooler (6543) for Render runtime.
+- **Migrations**: `pool.js` only enables SSL when `NODE_ENV=production`. For local runs against Supabase: `NODE_ENV=production DATABASE_URL="..." npm run migrate`.
+- **Render env vars**: `DATABASE_URL` (transaction pooler), `EBIRD_API_KEY`, `OPENWEATHER_API_KEY`, `JWT_SECRET`, `NODE_ENV=production`, `CORS_ORIGIN=https://tbird.vercel.app`.
+- **Vercel env vars**: `VITE_API_URL=https://tbird-9iyk.onrender.com`.
+- **Render free tier** sleeps after 15 min idle; first request takes ~30s.
 
 ## Known Limitations
 
