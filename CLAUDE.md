@@ -19,6 +19,7 @@ A birding app that helps eBird users find target species based on recent sightin
 - Hotspot results enrichment + hotspot ignore list
 - 15-minute cache for eBird observation and hotspot API responses
 - Weather integration — current conditions per hotspot (OpenWeather API, 1h cache)
+- Recent Notable Observations page — per-list view of eBird notable sightings in the list's region, grouped by species, sorted by most recent. Days back (1–30, default 7), "Target" tag + "only show targets" filter, checklist rows link to eBird, species names link to All About Birds.
 
 ## Roadmap
 
@@ -65,7 +66,7 @@ A birding app that helps eBird users find target species based on recent sightin
 
 ### Frontend (`/frontend/src/`)
 
-**Pages** (`pages/`): `FindTargetsPage.jsx` is the main feature — shows hotspot cards with target species and weather. Auto-loads weather for top 10 hotspots; "Load weather" button for the rest. Other pages: Login, Register, TargetLists, CreateTargetList, TargetListDetail, IgnoredHotspots, TestPage.
+**Pages** (`pages/`): `FindTargetsPage.jsx` is the main feature — shows hotspot cards with target species and weather. Auto-loads weather for top 10 hotspots; "Load weather" button for the rest. `NotableObservationsPage.jsx` (`/lists/:listId/notable`) — recent notable sightings for the list's region. Other pages: Login, Register, TargetLists, CreateTargetList, TargetListDetail, IgnoredHotspots, TestPage.
 
 **API client** (`services/api.js`): Single axios instance pointed at `VITE_API_URL` (default `http://localhost:3001`). JWT token injected via request interceptor from localStorage. All backend calls go through wrapper functions here.
 
