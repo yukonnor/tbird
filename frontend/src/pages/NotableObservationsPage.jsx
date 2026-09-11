@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getTargetLists, getTargetSpecies, getNotableObservations } from "../services/api";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const INITIAL_CHECKLIST_LIMIT = 10;
 
@@ -132,6 +133,7 @@ export default function NotableObservationsPage() {
   const [onlyTargets, setOnlyTargets] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  useDocumentTitle(list ? `Notable sightings: ${list.name}` : "Notable sightings");
 
   useEffect(() => {
     (async () => {

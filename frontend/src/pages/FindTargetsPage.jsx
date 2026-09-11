@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getHotspotsForTargets, getTargetLists, ignoreHotspot, getWeather } from "../services/api";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const WEATHER_AUTO_LOAD = 10;
 
@@ -13,6 +14,7 @@ export default function FindTargetsPage() {
   const [daysBack, setDaysBack] = useState(14);
   const [ignoringLocId, setIgnoringLocId] = useState(null);
   const [weatherData, setWeatherData] = useState({}); // { [locId]: { loading, data, error } }
+  useDocumentTitle(list ? `Find targets: ${list.name}` : "Find targets");
 
   useEffect(() => {
     getTargetLists().then((lists) => {

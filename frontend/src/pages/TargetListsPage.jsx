@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getTargetLists, getTargetSpecies, deleteTargetList } from "../services/api";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export default function TargetListsPage() {
+  useDocumentTitle("Target lists");
   const [lists, setLists] = useState([]);
   const [speciesCounts, setSpeciesCounts] = useState({});
   const [loading, setLoading] = useState(true);

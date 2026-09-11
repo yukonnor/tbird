@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { createTargetList, searchRegions, getSubregions } from "../services/api";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export default function CreateTargetListPage() {
+  useDocumentTitle("New target list");
   const [name, setName] = useState("");
   const [regionQuery, setRegionQuery] = useState("");
   const [regionCode, setRegionCode] = useState("");

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { getIgnoredHotspots, unignoreHotspot } from "../services/api";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export default function IgnoredHotspotsPage() {
+  useDocumentTitle("Ignored hotspots");
   const [hotspots, setHotspots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [removingLocId, setRemovingLocId] = useState(null);

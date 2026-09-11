@@ -10,6 +10,7 @@ import {
   markSpeciesUnseen,
   deleteTargetSpecies,
 } from "../services/api";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export default function TargetListDetailPage() {
   const { listId } = useParams();
@@ -17,6 +18,7 @@ export default function TargetListDetailPage() {
   const [species, setSpecies] = useState([]);
   const [tab, setTab] = useState("active");
   const [loading, setLoading] = useState(true);
+  useDocumentTitle(list?.name || "Target list");
 
   // Bulk import state
   const [bulkText, setBulkText] = useState("");
