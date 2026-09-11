@@ -11,7 +11,7 @@ export default function FindTargetsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [daysBack, setDaysBack] = useState(14);
+  const [daysBack, setDaysBack] = useState(7);
   const [ignoringLocId, setIgnoringLocId] = useState(null);
   const [weatherData, setWeatherData] = useState({}); // { [locId]: { loading, data, error } }
   useDocumentTitle(list ? `Find targets: ${list.name}` : "Find targets");

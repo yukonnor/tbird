@@ -184,98 +184,44 @@ export default function TargetListDetailPage() {
         >
           Seen ({seen.length})
         </button>
+        {species.length > 0 && (
+          <button
+            onClick={() => setTab("add")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+              tab === "add"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Add Species to List
+          </button>
+        )}
       </div>
 
       {tab === "active" && (
         <div>
-          {/* Bulk Import */}
-          <div className="bg-white border border-gray-200 rounded-md p-4 mb-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-2">
-              Bulk Import Species
-            </h3>
-            <textarea
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-              placeholder="Paste species names from eBird, one per line or comma-separated"
-              rows={5}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-            />
-            <button
-              onClick={handleBulkImport}
-              disabled={bulkLoading || !bulkText.trim()}
-              className="mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {bulkLoading ? "Importing..." : "Import Species"}
-            </button>
-
-            {bulkResult && !bulkResult.error && (
-              <div className="mt-3 text-sm space-y-1">
-                {bulkResult.added.length > 0 && (
-                  <p className="text-green-700">
-                    Added {bulkResult.added.length} species
-                  </p>
-                )}
-                {bulkResult.duplicates.length > 0 && (
-                  <p className="text-gray-500">
-                    {bulkResult.duplicates.length} already in list
-                  </p>
-                )}
-                {bulkResult.not_found.length > 0 && (
-                  <div className="text-amber-700">
-                    <p>Couldn't match {bulkResult.not_found.length} names:</p>
-                    <p className="text-xs mt-1">
-                      {bulkResult.not_found.join(", ")}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-            {bulkResult?.error && (
-              <p className="mt-2 text-sm text-red-600">{bulkResult.error}</p>
-            )}
-          </div>
-
-          {/* Single Search */}
-          <div className="bg-white border border-gray-200 rounded-md p-4 mb-6">
-            <h3 className="text-sm font-medium text-gray-900 mb-2">
-              Add Single Species
-            </h3>
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => handleSearchInput(e.target.value)}
-                placeholder="Search species..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          {species.length === 0 && (
+            <>
+              <AddSpeciesForms
+                bulkText={bulkText}
+                setBulkText={setBulkText}
+                bulkLoading={bulkLoading}
+                bulkResult={bulkResult}
+                handleBulkImport={handleBulkImport}
+                searchQuery={searchQuery}
+                handleSearchInput={handleSearchInput}
+                searchResults={searchResults}
+                searching={searching}
+                handleAddSingle={handleAddSingle}
               />
-              {(searchResults.length > 0 || searching) && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                  {searching && (
-                    <div className="px-3 py-2 text-sm text-gray-400">
-                      Searching...
-                    </div>
-                  )}
-                  {searchResults.map((s) => (
-                    <button
-                      key={s.speciesCode}
-                      onClick={() => handleAddSingle(s.speciesCode, s.comName)}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
-                    >
-                      <span className="text-gray-900">{s.comName}</span>
-                      <span className="text-gray-400 ml-2 text-xs">
-                        {s.sciName}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+            </>
+          )}
 
-          {/* Active Species List */}
           {active.length === 0 ? (
             <p className="text-center text-gray-400 py-8 text-sm">
-              No active targets. Import species above.
+              {species.length === 0
+                ? "No active targets. Import species above."
+                : "No active targets. Add more from the Add Species to List tab."}
             </p>
           ) : (
             <div className="space-y-1">
@@ -314,6 +260,21 @@ export default function TargetListDetailPage() {
         </div>
       )}
 
+      {tab === "add" && species.length > 0 && (
+        <AddSpeciesForms
+          bulkText={bulkText}
+          setBulkText={setBulkText}
+          bulkLoading={bulkLoading}
+          bulkResult={bulkResult}
+          handleBulkImport={handleBulkImport}
+          searchQuery={searchQuery}
+          handleSearchInput={handleSearchInput}
+          searchResults={searchResults}
+          searching={searching}
+          handleAddSingle={handleAddSingle}
+        />
+      )}
+
       {tab === "seen" && (
         <div>
           {seen.length === 0 ? (
@@ -348,5 +309,104 @@ export default function TargetListDetailPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function AddSpeciesForms({
+  bulkText,
+  setBulkText,
+  bulkLoading,
+  bulkResult,
+  handleBulkImport,
+  searchQuery,
+  handleSearchInput,
+  searchResults,
+  searching,
+  handleAddSingle,
+}) {
+  return (
+    <>
+      <div className="bg-white border border-gray-200 rounded-md p-4 mb-4">
+        <h3 className="text-sm font-medium text-gray-900 mb-2">
+          Bulk Import Species
+        </h3>
+        <textarea
+          value={bulkText}
+          onChange={(e) => setBulkText(e.target.value)}
+          placeholder="Paste species names from eBird, one per line or comma-separated"
+          rows={5}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+        />
+        <button
+          onClick={handleBulkImport}
+          disabled={bulkLoading || !bulkText.trim()}
+          className="mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50"
+        >
+          {bulkLoading ? "Importing..." : "Import Species"}
+        </button>
+
+        {bulkResult && !bulkResult.error && (
+          <div className="mt-3 text-sm space-y-1">
+            {bulkResult.added.length > 0 && (
+              <p className="text-green-700">
+                Added {bulkResult.added.length} species
+              </p>
+            )}
+            {bulkResult.duplicates.length > 0 && (
+              <p className="text-gray-500">
+                {bulkResult.duplicates.length} already in list
+              </p>
+            )}
+            {bulkResult.not_found.length > 0 && (
+              <div className="text-amber-700">
+                <p>Couldn't match {bulkResult.not_found.length} names:</p>
+                <p className="text-xs mt-1">
+                  {bulkResult.not_found.join(", ")}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+        {bulkResult?.error && (
+          <p className="mt-2 text-sm text-red-600">{bulkResult.error}</p>
+        )}
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-md p-4 mb-6">
+        <h3 className="text-sm font-medium text-gray-900 mb-2">
+          Add Single Species
+        </h3>
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => handleSearchInput(e.target.value)}
+            placeholder="Search species..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {(searchResults.length > 0 || searching) && (
+            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              {searching && (
+                <div className="px-3 py-2 text-sm text-gray-400">
+                  Searching...
+                </div>
+              )}
+              {searchResults.map((s) => (
+                <button
+                  key={s.speciesCode}
+                  onClick={() => handleAddSingle(s.speciesCode, s.comName)}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                >
+                  <span className="text-gray-900">{s.comName}</span>
+                  <span className="text-gray-400 ml-2 text-xs">
+                    {s.sciName}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
