@@ -27,7 +27,7 @@ export default function RegisterPage() {
     try {
       const { token, user } = await registerUser(email, password);
       login(token, user);
-      navigate("/test");
+      navigate("/lists");
     } catch (err) {
       setError(err.response?.data?.error || "Registration failed");
     } finally {

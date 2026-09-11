@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       const { token, user } = await loginUser(email, password);
       login(token, user);
-      navigate("/test");
+      navigate("/lists");
     } catch (err) {
       setError(err.response?.data?.error || "Login failed");
     } finally {
