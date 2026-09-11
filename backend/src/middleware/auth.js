@@ -19,9 +19,7 @@ function auth(req, res, next) {
 }
 
 function signToken(user) {
-  return jwt.sign({ sub: user.id, email: user.email }, JWT_SECRET, {
-    expiresIn: "7d",
-  });
+  return jwt.sign({ sub: user.id, email: user.email }, JWT_SECRET);
 }
 
 module.exports = { auth, signToken, JWT_SECRET };

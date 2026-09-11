@@ -54,7 +54,7 @@ A birding app that helps eBird users find target species based on recent sightin
 - `ebirdService.js` — eBird API client (axios). Pattern for all new API integrations: use the `cached(key, ttlMs, fetchFn)` utility (in-memory `Map`) to wrap every external call. TTLs: 15 min for observations/hotspots, 24h for taxonomy.
 - `targetFinderService.js` — orchestrates the main feature: fetches targets from DB, calls eBird for regional observations + per-hotspot enrichment, ranks hotspots by target count then recency.
 - `weatherService.js` — OpenWeather current conditions (`GET /api/weather?lat=&lng=`). 1h cache keyed to coords rounded to 2 decimal places (~1km) so nearby hotspots share entries. Returns: temp, feelsLike, description, windSpeed, windDeg, windGust, precipitation.
-- `auth.js` — JWT middleware (7-day expiry), injects `req.user`.
+- `auth.js` — JWT middleware (no expiry — users stay logged in until they log out or `JWT_SECRET` rotates), injects `req.user`.
 
 **Database**: PostgreSQL via Supabase. Connection pool in `db/pool.js` using `DATABASE_URL` env var.
 
