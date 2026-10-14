@@ -1,27 +1,20 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { getHotspotsForTargets, getTargetLists, ignoreHotspot, getWeather } from "../services/api";
+import { useOutletContext, Link } from "react-router-dom";
+import { getHotspotsForTargets, ignoreHotspot, getWeather } from "../services/api";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const WEATHER_AUTO_LOAD = 10;
 
 export default function FindTargetsPage() {
-  const { listId } = useParams();
-  const [list, setList] = useState(null);
+  const { list } = useOutletContext();
+  const listId = list.id;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [daysBack, setDaysBack] = useState(7);
   const [ignoringLocId, setIgnoringLocId] = useState(null);
   const [weatherData, setWeatherData] = useState({}); // { [locId]: { loading, data, error } }
-  useDocumentTitle(list ? `Find targets: ${list.name}` : "Find targets");
-
-  useEffect(() => {
-    getTargetLists().then((lists) => {
-      const found = lists.find((l) => l.id === listId);
-      setList(found || null);
-    });
-  }, [listId]);
+  useDocumentTitle(`Find targets: ${list.name}`);
 
   useEffect(() => {
     loadData();
@@ -102,24 +95,10 @@ export default function FindTargetsPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <Link
-        to={`/lists/${listId}`}
-        className="text-sm text-gray-500 hover:text-gray-700"
-      >
-        &larr; Back to list
-      </Link>
-
-      <div className="mt-4 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Where to Find Your Targets
-        </h1>
-        {list && (
-          <p className="text-sm text-gray-500 mt-1">
-            {list.name} &middot; {list.region_name || list.region_code}
-          </p>
-        )}
-      </div>
+    <div>
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        Where to Find Your Targets
+      </h2>
 
       {/* Controls */}
       <div className="flex items-center gap-4 mb-6">

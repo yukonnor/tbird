@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { getTargetLists, getTargetSpecies, getNotableObservations } from "../services/api";
+import { useState, useEffect, useMemo } from "react";
+import { useOutletContext } from "react-router-dom";
+import { getNotableObservations } from "../services/api";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const INITIAL_CHECKLIST_LIMIT = 10;
@@ -125,33 +125,20 @@ function SpeciesGroup({ group, isTarget }) {
 }
 
 export default function NotableObservationsPage() {
-  const { listId } = useParams();
-  const [list, setList] = useState(null);
+  const { list, species } = useOutletContext();
   const [back, setBack] = useState(7);
   const [obs, setObs] = useState([]);
-  const [targetCodes, setTargetCodes] = useState(new Set());
   const [onlyTargets, setOnlyTargets] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  useDocumentTitle(list ? `Notable sightings: ${list.name}` : "Notable sightings");
+  useDocumentTitle(`Notable sightings: ${list.name}`);
+
+  const targetCodes = useMemo(
+    () => new Set(species.filter((s) => !s.marked_seen_at).map((s) => s.species_code)),
+    [species]
+  );
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [lists, species] = await Promise.all([
-          getTargetLists(),
-          getTargetSpecies(listId, true),
-        ]);
-        setList(lists.find((l) => l.id === listId) || null);
-        setTargetCodes(new Set(species.map((s) => s.species_code)));
-      } catch {
-        // handled silently
-      }
-    })();
-  }, [listId]);
-
-  useEffect(() => {
-    if (!list) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -168,14 +155,7 @@ export default function NotableObservationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [list, back]);
-
-  if (!list && loading) {
-    return <div className="p-8 text-center text-gray-500">Loading...</div>;
-  }
-  if (!list) {
-    return <div className="p-8 text-center text-gray-500">List not found.</div>;
-  }
+  }, [list.region_code, back]);
 
   const allGroups = groupBySpecies(obs);
   const groups = onlyTargets
@@ -184,17 +164,10 @@ export default function NotableObservationsPage() {
   const targetMatchCount = allGroups.filter((g) => targetCodes.has(g.obs[0].speciesCode)).length;
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <Link to={`/lists/${listId}`} className="text-sm text-gray-500 hover:text-gray-700">
-        &larr; Back to list
-      </Link>
-
-      <div className="mt-4 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Recent Notable Observations</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {list.name} &middot; {list.region_name || list.region_code}
-        </p>
-      </div>
+    <div>
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">
+        Recent Notable Observations
+      </h2>
 
       <div className="mb-6 flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2">

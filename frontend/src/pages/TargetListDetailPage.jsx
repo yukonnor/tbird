@@ -1,8 +1,6 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useRef } from "react";
+import { useOutletContext, Link } from "react-router-dom";
 import {
-  getTargetLists,
-  getTargetSpecies,
   bulkImportSpecies,
   addTargetSpecies,
   searchSpecies,
@@ -13,42 +11,19 @@ import {
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 export default function TargetListDetailPage() {
-  const { listId } = useParams();
-  const [list, setList] = useState(null);
-  const [species, setSpecies] = useState([]);
+  const { list, species, reloadSpecies } = useOutletContext();
+  const listId = list.id;
   const [tab, setTab] = useState("active");
-  const [loading, setLoading] = useState(true);
-  useDocumentTitle(list?.name || "Target list");
+  useDocumentTitle(list.name);
 
-  // Bulk import state
   const [bulkText, setBulkText] = useState("");
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
 
-  // Single search state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const searchTimeout = useRef(null);
-
-  useEffect(() => {
-    loadData();
-  }, [listId]);
-
-  async function loadData() {
-    setLoading(true);
-    try {
-      const lists = await getTargetLists();
-      const found = lists.find((l) => l.id === listId);
-      setList(found || null);
-      const sp = await getTargetSpecies(listId);
-      setSpecies(sp);
-    } catch {
-      // handled silently
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleBulkImport() {
     if (!bulkText.trim()) return;
@@ -58,8 +33,7 @@ export default function TargetListDetailPage() {
       const result = await bulkImportSpecies(listId, bulkText);
       setBulkResult(result);
       setBulkText("");
-      const sp = await getTargetSpecies(listId);
-      setSpecies(sp);
+      await reloadSpecies();
     } catch (err) {
       setBulkResult({ error: err.response?.data?.error || "Import failed" });
     } finally {
@@ -95,8 +69,7 @@ export default function TargetListDetailPage() {
       });
       setSearchQuery("");
       setSearchResults([]);
-      const sp = await getTargetSpecies(listId);
-      setSpecies(sp);
+      await reloadSpecies();
     } catch {
       // handled silently — likely duplicate
     }
@@ -104,65 +77,25 @@ export default function TargetListDetailPage() {
 
   async function handleMarkSeen(speciesId) {
     await markSpeciesSeen(speciesId);
-    const sp = await getTargetSpecies(listId);
-    setSpecies(sp);
+    await reloadSpecies();
   }
 
   async function handleMarkUnseen(speciesId) {
     await markSpeciesUnseen(speciesId);
-    const sp = await getTargetSpecies(listId);
-    setSpecies(sp);
+    await reloadSpecies();
   }
 
   async function handleRemove(speciesId) {
     await deleteTargetSpecies(speciesId);
-    setSpecies((prev) => prev.filter((s) => s.id !== speciesId));
-  }
-
-  if (loading) {
-    return <div className="p-8 text-center text-gray-500">Loading...</div>;
-  }
-
-  if (!list) {
-    return <div className="p-8 text-center text-gray-500">List not found.</div>;
+    await reloadSpecies();
   }
 
   const active = species.filter((s) => !s.marked_seen_at);
   const seen = species.filter((s) => s.marked_seen_at);
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <Link to="/lists" className="text-sm text-gray-500 hover:text-gray-700">
-        &larr; Back to lists
-      </Link>
-
-      <div className="mt-4 mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{list.name}</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {list.region_name || list.region_code}
-        </p>
-        <p className="text-xs text-gray-400 mt-1">
-          {active.length} targets &middot; {seen.length} seen
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {active.length > 0 && (
-            <Link
-              to={`/lists/${listId}/find`}
-              className="inline-block px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
-            >
-              Where to Find My Targets
-            </Link>
-          )}
-          <Link
-            to={`/lists/${listId}/notable`}
-            className="inline-block px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50"
-          >
-            Recent Notable Observations
-          </Link>
-        </div>
-      </div>
-
-      {/* Tabs */}
+    <div>
+      {/* Sub-tabs within Targets */}
       <div className="flex gap-1 mb-6 border-b border-gray-200">
         <button
           onClick={() => setTab("active")}
@@ -172,7 +105,7 @@ export default function TargetListDetailPage() {
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
-          Active Targets ({active.length})
+          Active ({active.length})
         </button>
         <button
           onClick={() => setTab("seen")}
@@ -184,44 +117,25 @@ export default function TargetListDetailPage() {
         >
           Seen ({seen.length})
         </button>
-        {species.length > 0 && (
-          <button
-            onClick={() => setTab("add")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-              tab === "add"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            Add Species to List
-          </button>
-        )}
+        <button
+          onClick={() => setTab("add")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            tab === "add"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Add
+        </button>
       </div>
 
       {tab === "active" && (
         <div>
-          {species.length === 0 && (
-            <>
-              <AddSpeciesForms
-                bulkText={bulkText}
-                setBulkText={setBulkText}
-                bulkLoading={bulkLoading}
-                bulkResult={bulkResult}
-                handleBulkImport={handleBulkImport}
-                searchQuery={searchQuery}
-                handleSearchInput={handleSearchInput}
-                searchResults={searchResults}
-                searching={searching}
-                handleAddSingle={handleAddSingle}
-              />
-            </>
-          )}
-
           {active.length === 0 ? (
             <p className="text-center text-gray-400 py-8 text-sm">
               {species.length === 0
-                ? "No active targets. Import species above."
-                : "No active targets. Add more from the Add Species to List tab."}
+                ? "No targets yet. Add some from the Add tab."
+                : "No active targets. Add more from the Add tab."}
             </p>
           ) : (
             <div className="space-y-1">
@@ -260,7 +174,7 @@ export default function TargetListDetailPage() {
         </div>
       )}
 
-      {tab === "add" && species.length > 0 && (
+      {tab === "add" && (
         <AddSpeciesForms
           bulkText={bulkText}
           setBulkText={setBulkText}
