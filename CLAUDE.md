@@ -20,6 +20,7 @@ A birding app that helps eBird users find target species based on recent sightin
 - 15-minute cache for eBird observation and hotspot API responses
 - Weather integration — current conditions per hotspot (OpenWeather API, 1h cache)
 - Recent Notable Observations page — per-list view of eBird notable sightings in the list's region, grouped by species, sorted by most recent. Days back (1–30, default 7), "Target" tag + "only show targets" filter, checklist rows link to eBird, species names link to All About Birds.
+- Recent Target Observations page — same UI/sorting/links as Notable but shows recent sightings of the list's active target species (region-wide, one row per (species, hotspot) via eBird's `/data/obs/{region}/recent?detail=full`).
 
 ## Roadmap
 
@@ -66,7 +67,7 @@ A birding app that helps eBird users find target species based on recent sightin
 
 ### Frontend (`/frontend/src/`)
 
-**Pages** (`pages/`): `FindTargetsPage.jsx` is the main feature — shows hotspot cards with target species and weather. Auto-loads weather for top 10 hotspots; "Load weather" button for the rest. Defaults to 7 days back. `NotableObservationsPage.jsx` (`/lists/:listId/notable`) — recent notable sightings for the list's region. `TargetListDetailPage.jsx` (`/lists/:listId`) — tabbed view: Active Targets, Seen, and (only when the list has ≥1 species) "Add Species to List" which holds the Bulk Import + Add Single Species forms. Empty lists show those forms inline on the Active tab. Other pages: Login, Register, TargetLists, CreateTargetList, IgnoredHotspots, TestPage.
+**Pages** (`pages/`): `FindTargetsPage.jsx` is the main feature — shows hotspot cards with target species and weather. Auto-loads weather for top 10 hotspots; "Load weather" button for the rest. Defaults to 7 days back. `NotableObservationsPage.jsx` (`/lists/:listId/notable`) — recent notable sightings for the list's region. `TargetObservationsPage.jsx` (`/lists/:listId/target-observations`) — recent sightings of target species for the list's region. `TargetListDetailPage.jsx` (`/lists/:listId`) — tabbed view: Active Targets, Seen, and (only when the list has ≥1 species) "Add Species to List" which holds the Bulk Import + Add Single Species forms. Empty lists show those forms inline on the Active tab. Other pages: Login, Register, TargetLists, CreateTargetList, IgnoredHotspots, TestPage.
 
 **API client** (`services/api.js`): Single axios instance pointed at `VITE_API_URL` (default `http://localhost:3001`). JWT token injected via request interceptor from localStorage. All backend calls go through wrapper functions here.
 

@@ -98,6 +98,12 @@ export function deleteTargetSpecies(speciesId) {
   return api.delete(`/api/targets/species/${speciesId}`).then((r) => r.data);
 }
 
+export function getTargetObservations(listId, back = 7) {
+  return api
+    .get(`/api/targets/lists/${listId}/target-observations`, { params: { back } })
+    .then((r) => r.data);
+}
+
 // Target Finder
 export function getHotspotsForTargets(listId, daysBack = 14) {
   return api

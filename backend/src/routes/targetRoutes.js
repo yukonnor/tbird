@@ -1,7 +1,11 @@
 const express = require("express");
 const pool = require("../../db/pool");
 const { auth } = require("../middleware/auth");
-const { matchSpeciesName } = require("../services/ebirdService");
+const {
+  matchSpeciesName,
+  getRecentObservationsDetailed,
+  getRecentObservationsOfSpecies,
+} = require("../services/ebirdService");
 const { findTargetsAtHotspots } = require("../services/targetFinderService");
 
 const router = express.Router();
@@ -240,6 +244,51 @@ router.get("/lists/:listId/hotspots", async (req, res, next) => {
     const daysBack = parseInt(req.query.days_back) || 14;
     const result = await findTargetsAtHotspots(req.params.listId, req.user.id, daysBack);
     res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/targets/lists/:listId/target-observations
+router.get("/lists/:listId/target-observations", async (req, res, next) => {
+  try {
+    const list = await pool.query(
+      "SELECT region_code FROM target_lists WHERE id = $1 AND user_id = $2",
+      [req.params.listId, req.user.id]
+    );
+    if (list.rows.length === 0) {
+      return res.status(404).json({ error: "List not found" });
+    }
+
+    let back = parseInt(req.query.back, 10) || 7;
+    if (back < 1) back = 1;
+    if (back > 30) back = 30;
+
+    const { rows: targets } = await pool.query(
+      "SELECT species_code FROM target_species WHERE target_list_id = $1 AND marked_seen_at IS NULL",
+      [req.params.listId]
+    );
+    const targetCodes = new Set(targets.map((t) => t.species_code));
+
+    const regionCode = list.rows[0].region_code;
+
+    // Step 1: regional call tells us which target species had any sighting in the window.
+    const regional = await getRecentObservationsDetailed(regionCode, back);
+    const seenTargetCodes = Array.from(
+      new Set(
+        regional
+          .filter((o) => targetCodes.has(o.speciesCode))
+          .map((o) => o.speciesCode)
+      )
+    );
+
+    // Step 2: per-species calls surface every location each target was seen at.
+    const perSpecies = await Promise.all(
+      seenTargetCodes.map((code) =>
+        getRecentObservationsOfSpecies(regionCode, code, back).catch(() => [])
+      )
+    );
+    res.json(perSpecies.flat());
   } catch (err) {
     next(err);
   }
